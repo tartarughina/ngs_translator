@@ -16,7 +16,7 @@ lazy val dependencies = Seq(
 
 lazy val root = (project in file("."))
   .settings(
-    name := "nsg_translator",
+    name := "ngs_translator",
     idePackagePrefix := Some("com.ngs_translator"),
     libraryDependencies ++= dependencies
   )
