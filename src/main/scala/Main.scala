@@ -15,7 +15,7 @@ object Main:
   private def endsWithSlash(s: String): String =
     if (s.endsWith("/")) s else s + "/"
 
-  private def load(dir: String, filename: String): (List[NodeObject], List[EndpointPair[NodeObject]]) =
+  private def load(dir: String, filename: String): (List[MyNode], List[MyEdge]) =
     val graph: NetGraph = NetGraph.load(filename, endsWithSlash(dir)) match {
       case Some(value) =>
         value
@@ -23,10 +23,14 @@ object Main:
         throw new IOException("Error reading graph")
     }
 
-    (graph.sm.nodes.asScala.toList, graph.sm.edges.asScala.toList)
+    (translateNode(graph.sm.nodes.asScala.toList), translateEdge(graph.sm.edges.asScala.toList, graph))
 
-  private def translateEdge(edges: List[EndpointPair[NodeObject]]): List[MyEdge] =
-    edges.map(edge => MyEdge(edge.source.id, edge.target.id, edge.target.storedValue))
+  private def translateEdge(edges: List[EndpointPair[NodeObject]], graph: NetGraph): List[MyEdge] =
+    edges.map(edge => {
+      val action = graph.sm.edgeValue(edge.source, edge.target).get
+
+      MyEdge(edge.source.id, edge.target.id, action.cost, action.actionType, action.resultingValue.getOrElse(0))
+    })
 
   private def translateNode(nodes: List[NodeObject]): List[MyNode] =
     nodes.map(node => MyNode(node.id, node.children, node.props, node.currentDepth, node.propValueRange, node.maxDepth, node.maxBranchingFactor, node.maxProperties, node.storedValue, node.valuableData))
@@ -66,8 +70,8 @@ object Main:
     val (base_nodes, base_edges) = load(getDir(base), getName(base))
     val (perturbed_nodes, perturbed_edges) = load(getDir(perturbed), getName(perturbed))
 
-    val base_graph = MyGraph(translateNode(base_nodes), translateEdge(base_edges))
-    val perturbed_graph = MyGraph(translateNode(perturbed_nodes), translateEdge(perturbed_edges))
+    val base_graph = MyGraph(base_nodes, base_edges)
+    val perturbed_graph = MyGraph(perturbed_nodes, perturbed_edges)
 
     persistJson(base_graph, base)
     persistJson(perturbed_graph, perturbed)
